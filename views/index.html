@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title><%= title  %> </title>
+      <script src="//cdn.bootcss.com/jquery/1.11.3/jquery.min.js"></script>
+   </head>
+  <body>
+  <div class="field required">
+        <label>封面图</label>
+        <input type="file" id="coverInputs" value="123">
+        <span id="coverInfo"></span>
+        <div class="coverinfoshow"></div>
+        <input type="text" style="display: none" name="coverpic" id="coverpic">
+      </div>
+
+
+ <script>
+   var fileInputs = document.getElementById("fileInput");
+ var fileInfo = document.getElementById("fileInfo");
+ var coverInfo = document.getElementById("coverInfo");   
+ var coverInputs = document.getElementById("coverInputs");
+
+ uploadPic(coverInputs,coverInfo,function(base64data){
+    var img = "<img src='"+base64data+"'>";
+    $(".coverinfoshow").html(img);
+ },function(imgurl){
+ 
+   $("#coverpic")[0].value = imgurl;
+
+ });
+ uploadPic(fileInputs,fileInfo);
+
+/*
+uploadPic函数
+fileInput file上传的input按钮
+fileInfo 上传信息提示站位
+callback1 图片预览
+callback2 
+
+*/
+
+
+ function uploadPic(fileInput,fileInfo,callback1,callback2){
+    //监听change事件
+    fileInput.addEventListener('change',function(){
+        //检查文件是否选择
+        if(!fileInput.value){
+            fileInfo.innerHTML = "没有选择任何文件";
+            return;
+        }
+        
+        //获取file的引用
+        var file = fileInput.files[0];
+        console.log(file);
+        //获取file信息
+
+        if(file.type !== 'image/jpeg' && file.type !== 'image/png' && file.type !== 'image/gif'){
+            alert('不是有效的图片');
+            return;
+        }
+        
+        //读取文件
+        var reader = new FileReader();
+        reader.onload = function(e){
+            var base64data = e.target.result;
+            if(callback1){
+              callback1(base64data)
+            }
+
+             $.ajax({
+                url:"/upload-qiniu/uploadpic",
+                type:"post",
+                data:{imgData:base64data},
+                beforeSend:function(){
+                  $(fileInfo).html("图片正在上传...");
+                },
+                success:function(data){
+                  console.log(data);
+                      if(JSON.parse(data).status == "100"){
+                        $(fileInfo).html("上传完成...");
+                      }
+                      if(callback2){
+                        callback2(JSON.parse(data).imageUrl);
+                      }else{
+                         var markdownurl = "![]"+'('+JSON.parse(data).imageUrl+')';
+                          var text = $("#textarea").val();
+                          text += markdownurl;
+                          $("#textarea").val(text);  
+                      }  
+                } 
+            })
+            
+        }
+         // 以DataURL的形式读取文件:
+        reader.readAsDataURL(file);
+    });
+ }   
+ 
+  </script>
+</body>
+</html>
